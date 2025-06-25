@@ -2,6 +2,7 @@ package com.luv2code.books.controller;
 
 
 import com.luv2code.books.entity.Book;
+import com.luv2code.books.exception.BookNotFoundException;
 import com.luv2code.books.request.BookRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -59,7 +60,7 @@ public class BookController {
         return books.stream()
                 .filter(book -> book.getId() == id)
                 .findFirst()
-                .orElse(null);
+                .orElseThrow(() -> new BookNotFoundException("Book not found - " + id));
     }
 
     public void createBook(Book newBook) {
@@ -90,20 +91,27 @@ public class BookController {
     @Operation(summary = "Update an existing book", description = "Update an existing book in the library")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @PutMapping("/{id}")
-    public void updateBook(@Parameter(description = "id of the book to update") @PathVariable @Min(value = 1) long id, @Valid @RequestBody BookRequest bookRequest) {
+    public Book updateBook(@Parameter(description = "id of the book to update") @PathVariable @Min(value = 1) long id, @Valid @RequestBody BookRequest bookRequest) {
         for (int i = 0; i < books.size(); i++) {
             if (books.get(i).getId() == id) {
                 Book updatedBook = convertToBook(id, bookRequest);
                 books.set(i, updatedBook);
-                return;
+                return updatedBook;
             }
         }
+
+        throw new BookNotFoundException("Book not found - " + id);
     }
 
     @Operation(summary = "Delete a book by id", description = "Delete a book by its unique id")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @DeleteMapping("/{id}")
     public void deleteBook(@Parameter(description = "id of the book to delete") @PathVariable @Min(value = 1) long id) {
+        books.stream()
+                .filter(book -> book.getId() == id)
+                .findFirst()
+                .orElseThrow(() -> new BookNotFoundException("Book not found - " + id));
+
         books.removeIf(book -> book.getId() == id);
     }
 
@@ -111,5 +119,8 @@ public class BookController {
     private Book convertToBook(long id, BookRequest bookRequest) {
         return new Book(id, bookRequest.getTitle(), bookRequest.getAuthor(), bookRequest.getCategory(), bookRequest.getRating());
     }
+
+
+
 
 }
